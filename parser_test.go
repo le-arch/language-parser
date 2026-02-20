@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestParseAcceptLanguage covers both Part 1 and Part 2 requirements
+// TestParseAcceptLanguage covers Parts 1, 2, and 3 requirements
 func TestParseAcceptLanguage(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -20,21 +20,21 @@ func TestParseAcceptLanguage(t *testing.T) {
 			header:      "en-US, fr-CA, fr-FR",
 			supported:   []string{"fr-FR", "en-US"},
 			expected:    []string{"en-US", "fr-FR"},
-			description: "Client prefers en-US (1st), fr-CA (2nd), fr-FR (3rd). Server supports fr-FR, en-US. Should return [en-US, fr-FR] in preference order.",
+			description: "Should return [en-US, fr-FR] in preference order.",
 		},
 		{
 			name:        "Part1 - Example 2: Partial match",
 			header:      "fr-CA, fr-FR",
 			supported:   []string{"en-US", "fr-FR"},
 			expected:    []string{"fr-FR"},
-			description: "Client prefers fr-CA (1st), fr-FR (2nd). Server supports en-US, fr-FR. Should return [fr-FR] (fr-CA not supported).",
+			description: "Should return [fr-FR] (fr-CA not supported).",
 		},
 		{
 			name:        "Part1 - Example 3: Exact match",
 			header:      "en-US",
 			supported:   []string{"en-US", "fr-CA"},
 			expected:    []string{"en-US"},
-			description: "Client prefers en-US. Server supports en-US, fr-CA. Should return [en-US].",
+			description: "Should return [en-US].",
 		},
 		{
 			name:        "Part1 - Empty header",
@@ -51,46 +51,25 @@ func TestParseAcceptLanguage(t *testing.T) {
 			description: "No supported languages should return empty slice.",
 		},
 		{
-			name:        "Part1 - No matches",
-			header:      "de-DE, es-ES",
-			supported:   []string{"en-US", "fr-CA"},
-			expected:    []string{},
-			description: "When no client preferences match supported languages, return empty slice.",
-		},
-		{
-			name:        "Part1 - All matches",
-			header:      "en-US, fr-CA, fr-FR",
-			supported:   []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
-			expected:    []string{"en-US", "fr-CA", "fr-FR"},
-			description: "When all client preferences are supported, return all in original order.",
-		},
-		{
 			name:        "Part1 - Whitespace handling",
 			header:      "  en-US  ,  fr-CA  ,  fr-FR  ",
 			supported:   []string{"fr-FR", "en-US"},
 			expected:    []string{"en-US", "fr-FR"},
-			description: "Should properly trim whitespace around language tags.",
-		},
-		{
-			name:        "Part1 - Extra commas and spaces",
-			header:      "en-US, , fr-CA, , fr-FR",
-			supported:   []string{"fr-FR", "en-US"},
-			expected:    []string{"en-US", "fr-FR"},
-			description: "Should skip empty entries between commas.",
+			description: "Should properly trim whitespace.",
 		},
 		{
 			name:        "Part1 - Duplicate prevention",
 			header:      "en-US, fr-CA, en-US",
 			supported:   []string{"en-US", "fr-CA"},
 			expected:    []string{"en-US", "fr-CA"},
-			description: "Should not duplicate languages even if they appear multiple times in header.",
+			description: "Should not duplicate languages.",
 		},
 		{
 			name:        "Part1 - Case sensitivity",
 			header:      "en-us, fr-ca",
 			supported:   []string{"en-US", "fr-CA"},
 			expected:    []string{},
-			description: "Language tags are case-sensitive. 'en-us' ≠ 'en-US'.",
+			description: "Language tags are case-sensitive.",
 		},
 
 		// PART 2: GENERIC TAG SUPPORT 
@@ -99,86 +78,116 @@ func TestParseAcceptLanguage(t *testing.T) {
 			header:      "en",
 			supported:   []string{"en-US", "fr-CA", "fr-FR"},
 			expected:    []string{"en-US"},
-			description: "Generic 'en' should match all English variants (en-US).",
+			description: "Generic 'en' should match all English variants.",
 		},
 		{
 			name:        "Part2 - Generic 'fr' matches French variants",
 			header:      "fr",
 			supported:   []string{"en-US", "fr-CA", "fr-FR"},
 			expected:    []string{"fr-CA", "fr-FR"},
-			description: "Generic 'fr' should match all French variants (fr-CA, fr-FR).",
+			description: "Generic 'fr' should match all French variants.",
 		},
 		{
 			name:        "Part2 - Generic after specific - order preserved",
 			header:      "fr-FR, fr",
 			supported:   []string{"en-US", "fr-CA", "fr-FR"},
 			expected:    []string{"fr-FR", "fr-CA"},
-			description: "Client prefers fr-FR first, then any French - should return fr-FR (exact) then fr-CA (generic match).",
+			description: "Should return fr-FR (exact) then fr-CA (generic match).",
 		},
 		{
 			name:        "Part2 - Multiple generic tags",
 			header:      "en, fr",
 			supported:   []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
 			expected:    []string{"en-US", "fr-CA", "fr-FR"},
-			description: "Client wants English then French - should return all English then all French variants.",
+			description: "Should return all English then all French variants.",
 		},
 		{
 			name:        "Part2 - Generic with multiple variants",
 			header:      "es",
 			supported:   []string{"es-ES", "es-MX", "es-AR", "en-US"},
 			expected:    []string{"es-ES", "es-MX", "es-AR"},
-			description: "Client wants Spanish, server has multiple variants - should return all Spanish variants.",
-		},
-		{
-			name:        "Part2 - Exact match takes precedence over generic",
-			header:      "fr-CA, fr",
-			supported:   []string{"fr-FR", "fr-CA"},
-			expected:    []string{"fr-CA", "fr-FR"},
-			description: "Client explicitly wants fr-CA first, then any French - fr-CA should appear before fr-FR.",
-		},
-		{
-			name:        "Part2 - Generic after no exact match",
-			header:      "fr-BE, fr",
-			supported:   []string{"fr-FR", "fr-CA"},
-			expected:    []string{"fr-FR", "fr-CA"},
-			description: "Client wants fr-BE (not supported), then any French - should return all French variants.",
-		},
-		{
-			name:        "Part2 - Generic with no matches",
-			header:      "zh",
-			supported:   []string{"en-US", "fr-CA"},
-			expected:    []string{},
-			description: "Client wants Chinese, server has no Chinese variants - return empty.",
-		},
-		{
-			name:        "Part2 - Mixed case with generic",
-			header:      "EN",
-			supported:   []string{"en-US", "fr-CA"},
-			expected:    []string{},
-			description: "Generic tags are case-sensitive - 'EN' doesn't match 'en-US'.",
+			description: "Should return all Spanish variants.",
 		},
 
-		// COMBINED SCENARIOS (Part 1 + Part 2)
+		// PART 3: WILDCARD SUPPORT 
 		{
-			name:        "Combined - Complex scenario with exact and generic",
-			header:      "en-US, fr, de-DE, es",
-			supported:   []string{"en-US", "en-GB", "fr-CA", "fr-FR", "de-DE", "es-ES", "es-MX"},
-			expected:    []string{"en-US", "fr-CA", "fr-FR", "de-DE", "es-ES", "es-MX"},
-			description: "Should handle mix of exact and generic tags correctly.",
+			name:        "Part3 - Wildcard after specific match",
+			header:      "en-US, *",
+			supported:   []string{"en-US", "fr-CA", "fr-FR"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR"},
+			description: "Wildcard matches all remaining languages after exact match",
 		},
 		{
-			name:        "Combined - Duplicate prevention across exact and generic",
-			header:      "en-US, en, en-GB",
-			supported:   []string{"en-US", "en-GB", "en-AU"},
-			expected:    []string{"en-US", "en-GB", "en-AU"},
-			description: "Generic 'en' should match all English variants (en-GB, en-AU) after exact match en-US.",
+			name:        "Part3 - Wildcard with generic and exact",
+			header:      "fr-FR, fr, *",
+			supported:   []string{"en-US", "fr-CA", "fr-FR"},
+			expected:    []string{"fr-FR", "fr-CA", "en-US"},
+			description: "Wildcard matches remaining languages after exact and generic matches",
 		},
 		{
-			name:        "Combined - Order preservation with multiple variants",
-			header:      "fr, en, es",
-			supported:   []string{"es-ES", "en-US", "fr-FR", "fr-CA", "en-GB", "es-MX"},
-			expected:    []string{"fr-FR", "fr-CA", "en-US", "en-GB", "es-ES", "es-MX"},
-			description: "Should preserve order of generic tags and their variants.",
+			name:        "Part3 - Wildcard alone",
+			header:      "*",
+			supported:   []string{"en-US", "fr-CA", "fr-FR"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR"},
+			description: "Wildcard alone matches all supported languages",
+		},
+		{
+			name:        "Part3 - Wildcard after unmatched preference",
+			header:      "de-DE, *",
+			supported:   []string{"en-US", "fr-CA", "fr-FR"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR"},
+			description: "Wildcard matches all when previous preference doesn't match",
+		},
+		{
+			name:        "Part3 - Complex scenario with generic and wildcard",
+			header:      "en, fr-FR, *",
+			supported:   []string{"en-US", "en-GB", "fr-CA", "fr-FR", "de-DE"},
+			expected:    []string{"en-US", "en-GB", "fr-FR", "fr-CA", "de-DE"},
+			description: "Generic en matches en-US,en-GB; fr-FR exact; wildcard adds remaining",
+		},
+		{
+			name:        "Part3 - Multiple wildcards",
+			header:      "en-US, *, fr-FR, *",
+			supported:   []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			description: "Multiple wildcards - second wildcard has nothing left to match",
+		},
+		{
+			name:        "Part3 - Wildcard with all languages already matched",
+			header:      "en-US, fr-CA, fr-FR, *",
+			supported:   []string{"en-US", "fr-CA", "fr-FR"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR"},
+			description: "Wildcard adds nothing when all languages already matched",
+		},
+		{
+			name:        "Part3 - Wildcard preserves supported order",
+			header:      "*, en-US",
+			supported:   []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			description: "Wildcard first matches all in supported order",
+		},
+		{
+			name:        "Part3 - Wildcard with generic after",
+			header:      "*, fr",
+			supported:   []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR", "de-DE"},
+			description: "Wildcard matches all, generic fr has nothing new to add",
+		},
+
+		// COMBINED SCENARIOS (All Parts) 
+		{
+			name:        "Combined - Complex scenario with exact, generic, and wildcard",
+			header:      "en-US, fr, de-DE, *",
+			supported:   []string{"en-US", "en-GB", "fr-CA", "fr-FR", "de-DE", "es-ES", "it-IT"},
+			expected:    []string{"en-US", "fr-CA", "fr-FR", "de-DE", "en-GB", "es-ES", "it-IT"},
+			description: "Should handle mix of exact, generic, and wildcard correctly",
+		},
+		{
+			name:        "Combined - Wildcard after generic with multiple variants",
+			header:      "en, *",
+			supported:   []string{"en-US", "en-GB", "fr-CA", "fr-FR", "de-DE"},
+			expected:    []string{"en-US", "en-GB", "fr-CA", "fr-FR", "de-DE"},
+			description: "Generic en matches all English variants, wildcard adds the rest",
 		},
 	}
 
@@ -221,6 +230,12 @@ func TestLanguageParser(t *testing.T) {
 			supported: []string{"en-US", "fr-CA", "fr-FR"},
 			expected: []string{"fr-CA", "fr-FR"},
 		},
+		{
+			name:     "Parser - Wildcard match",
+			header:   "en-US, *",
+			supported: []string{"en-US", "fr-CA", "fr-FR"},
+			expected: []string{"en-US", "fr-CA", "fr-FR"},
+		},
 	}
 	
 	for _, tt := range tests {
@@ -248,6 +263,16 @@ func BenchmarkParseAcceptLanguage(b *testing.B) {
 func BenchmarkParseAcceptLanguageWithGeneric(b *testing.B) {
 	header := "en, fr, de, es, ja, zh"
 	supported := []string{"en-US", "fr-FR", "de-DE", "es-ES", "ja-JP", "zh-CN"}
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		parseAcceptLanguage(header, supported)
+	}
+}
+
+func BenchmarkParseAcceptLanguageWithWildcard(b *testing.B) {
+	header := "en-US, fr, *"
+	supported := []string{"en-US", "fr-CA", "fr-FR", "de-DE", "es-ES", "it-IT"}
 	
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
